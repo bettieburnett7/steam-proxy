@@ -4,12 +4,23 @@ const express = require('express');
 
 const cors = require('cors');
 
+const rateLimit = require('express-rate-limit')
 
 // Node 18+ has fetch built-in (no need for node-fetch)
 
 const app = express();
 
-app.use(cors());
+// Allow only your frontend to call this API
+app.use(cors({
+origin: 'https://steam-frontend-gomv.onrender.com'
+}));
+
+// Limit requests to prevent abuse
+const limiter = rateLimit({
+windowMs: 60 * 1000, // 1 minute
+limit: 60, // max 60 requests per IP per minute
+});
+app.use(limiter);
 
 
 const PORT = process.env.PORT || 3000;
