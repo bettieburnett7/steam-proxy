@@ -34,75 +34,46 @@ app.get('/', (_req, res) => {
 
 });
 
-
+// --- Profile route ---
 app.get('/steam/profile', async (req, res) => {
+try {
+const { steamid } = req.query;
+if (!steamid) return res.status(400).json({ error: 'Missing ?steamid' });
 
-  try {
+const url = new URL('https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/');
+url.searchParams.set('key', KEY);
+url.searchParams.set('steamids', steamid);
 
-    const { steamid } = req.query;
-
-    if (!steamid) return res.status(400).json({ error: 'Missing ?steamid=' });
-
-
-    const url = new URL('https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/');
-
-    url.searchParams.set('key', KEY);
-
-    url.searchParams.set('steamids', steamid);
-
-
-    const r = await fetch(url);
-
-    const data = await r.json();
-
-    res.json(data);
-
-  } catch (e) {
-
-    console.error(e);
-
-    res.status(500).json({ error: 'Proxy error' });
-
-  }
-
+const r = await fetch(url);
+const data = await r.json();
+res.json(data);
+} catch (e) {
+console.error(e);
+res.status(500).json({ error: 'Proxy error' });
+}
 });
 
-
+// --- Owned games route ---
 app.get('/steam/owned-games', async (req, res) => {
+try {
+const { steamid } = req.query;
+if (!steamid) return res.status(400).json({ error: 'Missing ?steamid' });
 
-  try {
+const url = new URL('https://api.steampowered.com/IPlayerService/GetOwnedGames/v1/');
+url.searchParams.set('key', KEY);
+url.searchParams.set('steamid', steamid);
+url.searchParams.set('include_appinfo', 'true');
+url.searchParams.set('include_played_free_games', 'true');
 
-    const { steamid } = req.query;
-
-    if (!steamid) return res.status(400).json({ error: 'Missing ?steamid=' });
-
-
-    const url = new URL('https://api.steampowered.com/IPlayerService/GetOwnedGames/v1/');
-
-    url.searchParams.set('key', KEY);
-
-    url.searchParams.set('steamid', steamid);
-
-    url.searchParams.set('include_appinfo', 'true');
-
-    url.searchParams.set('include_played_free_games', 'true');
-
-
-    const r = await fetch(url);
-
-    const data = await r.json();
-
-    res.json(data);
-
-  } catch (e) {
-
-    console.error(e);
-
-    res.status(500).json({ error: 'Proxy error' });
-
-  }
-
+const r = await fetch(url);
+const data = await r.json();
+res.json(data);
+} catch (e) {
+console.error(e);
+res.status(500).json({ error: 'Proxy error' });
+}
 });
+
 
 // Resolve a vanity name or profile URL to a 64-bit SteamID
 app.get('/steam/resolve', async (req, res) => {
