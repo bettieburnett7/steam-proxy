@@ -104,6 +104,35 @@ app.get('/steam/owned-games', async (req, res) => {
 
 });
 
+// Resolve a vanity name or profile URL to a 64-bit SteamID
+app.get('/steam/resolve', async (req, res) => {
+try {
+let { vanity } = req.query;
+if (!vanity) return res.status(400).json({ error: 'Missing ?vanity' });
+
+// If a full Steam URL was pasted, extract the path segment
+try {
+const u = new URL(vanity);
+const parts = u.pathname.split('/').filter(Boolean);
+if (parts[0] === 'id' && parts[1]) vanity = parts[1]; // vanity path -> resolve below
+if (parts[0] === 'profiles' && parts[1]) { // already a 64-bit steamid
+return res.json({ response: { success: 1, steamid: parts[1] } });
+}
+} catch (_) { /* not a URL */ }
+
+const url = new URL('https://api.steampowered.com/ISteamUser/ResolveVanityURL/v1/');
+url.searchParams.set('key', KEY);
+url.searchParams.set('vanityurl', vanity);
+
+const r = await fetch(url);
+if (!r.ok) return res.status(502).json({ error: `Steam error ${r.status}` });
+const j = await r.json();
+return res.json(j);
+} catch (e) {
+console.error(e);
+res.status(500).json({ error: 'Proxy error' });
+}
+});
 
 app.listen(PORT, () => console.log(`Steam proxy listening on http://localhost:${PORT}`));
 
