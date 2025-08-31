@@ -104,6 +104,17 @@ res.status(500).json({ error: 'Proxy error' });
 // (optional) tiny request logger to help debug
 app.use((req, _res, next) => { console.log(req.method, req.url); next(); });
 
+// Debug endpoint: list all registered routes so we can verify what's live
+app.get('/routes', (_req, res) => {
+const list = (app._router?.stack || [])
+.filter(layer => layer.route)
+.map(layer => ({
+method: Object.keys(layer.route.methods)[0]?.toUpperCase(),
+path: layer.route.path
+}));
+res.json(list);
+});
+
 app.listen(PORT, () => {
 console.log(`Steam proxy listening on http://localhost:${PORT}`);
 });
