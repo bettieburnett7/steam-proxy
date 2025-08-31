@@ -115,6 +115,11 @@ path: layer.route.path
 res.json(list);
 });
 
+// Health check so we can prove a new deploy is live
+app.get('/ping', (_req, res) => {
+res.json({ ok: true, now: new Date().toISOString() });
+});
+
 app.listen(PORT, () => {
 console.log(`Steam proxy listening on http://localhost:${PORT}`);
 });
