@@ -1,33 +1,42 @@
 require('dotenv').config();
+
 const express = require('express');
 const cors = require('cors');
 const rateLimit = require('express-rate-limit');
 
-// ---- app + middleware ----
 const app = express();
 
-// Allow only your frontend (adjust if your frontend URL changes)
+/* --- CORS: allow your frontend --- */
 app.use(cors({
-origin: 'https://steam-frontend-gomv.onrender.com'
+origin: ['https://steam-frontend-gomv.onrender.com'],
 }));
 
-// Simple rate limiting
-const limiter = rateLimit({
+/* --- Rate limiting --- */
+app.use(rateLimit({
 windowMs: 60 * 1000, // 1 minute
-limit: 60, // 60 req/min/IP
-});
-app.use(limiter);
+limit: 60, // max 60 requests/min
+}));
 
-// Config
+/* --- Simple request logger --- */
+app.use((req, _res, next) => { console.log(req.method, req.url); next(); });
+
+/* --- Config --- */
 const PORT = process.env.PORT || 3000;
 const KEY = process.env.STEAM_KEY;
 
-// Root health-ish text
+/* Root route */
 app.get('/', (_req, res) => {
-res.send('Steam proxy running');
+res.type('text').send('Steam proxy running');
 });
 
-/* -------------------- STEAM PROFILE -------------------- */
+/* Hello check (quick test) */
+app.get('/hello', (_req, res) => {
+res.type('text').send('hello from new deploy');
+});
+
+/* ================== STEAM API ROUTES ================== */
+
+/* Profile summary */
 app.get('/steam/profile', async (req, res) => {
 try {
 const { steamid } = req.query;
@@ -46,7 +55,7 @@ res.status(500).json({ error: 'Proxy error' });
 }
 });
 
-/* -------------------- OWNED GAMES -------------------- */
+/* Owned games */
 app.get('/steam/owned-games', async (req, res) => {
 try {
 const { steamid } = req.query;
@@ -67,26 +76,23 @@ res.status(500).json({ error: 'Proxy error' });
 }
 });
 
-/* -------------------- RESOLVE VANITY -> STEAMID -------------------- */
+/* Resolve vanity/profile URL to steamid */
 app.get('/steam/resolve', async (req, res) => {
 try {
 let { v: vanity } = req.query;
 if (!vanity) return res.status(400).json({ error: 'Missing ?v' });
 
-// If a full profile URL was pasted, try to extract the tail
+// If it's a full URL, extract ID or custom name
 try {
 const u = new URL(vanity);
 const parts = u.pathname.split('/').filter(Boolean);
-// /id/<name> or /profiles/<steamid64>
 if (parts[0] === 'profiles' && parts[1]) {
 return res.json({ response: { success: 1, steamid: parts[1] } });
 }
 if (parts[0] === 'id' && parts[1]) {
 vanity = parts[1];
 }
-} catch {
-// not a URL; keep as text
-}
+} catch { /* Not a URL, keep as text */ }
 
 const url = new URL('https://api.steampowered.com/ISteamUser/ResolveVanityURL/v1/');
 url.searchParams.set('key', KEY);
@@ -101,27 +107,27 @@ res.status(500).json({ error: 'Proxy error' });
 }
 });
 
-// Simple test route to confirm deployment
-app.get('/hello', (_req, res) => {
-res.type('text').send('hello from new deploy');
-});
+/* ================== DEBUG ROUTES ================== */
 
-/* -------------------- DEBUG ENDPOINTS -------------------- */
+/* Ping: proves service works */
 app.get('/ping', (_req, res) => {
 res.json({ ok: true, now: new Date().toISOString() });
 });
 
+/* Routes: lists all registered endpoints */
 app.get('/routes', (_req, res) => {
 const list = (app._router?.stack || [])
-.filter(layer => layer.route)
-.map(layer => ({
-method: Object.keys(layer.route.methods)[0]?.toUpperCase(),
-path: layer.route.path,
-}));
+.filter(l => l.route && l.route.methods && l.route.methods.get)
+.map(l => ({ method: 'GET', path: l.route.path }));
 res.json(list);
 });
 
-// Start server (keep this LAST)
+/* Catch 404 errors */
+app.use((req, res) => {
+res.status(404).json({ error: 'No route matched', path: req.originalUrl });
+});
+
+/* Start server */
 app.listen(PORT, () => {
 console.log(`Steam proxy listening on http://localhost:${PORT}`);
 });
