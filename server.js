@@ -101,6 +101,11 @@ res.status(500).json({ error: 'Proxy error' });
 }
 });
 
+// Simple test route to confirm deployment
+app.get('/hello', (_req, res) => {
+res.type('text').send('hello from new deploy');
+});
+
 /* -------------------- DEBUG ENDPOINTS -------------------- */
 app.get('/ping', (_req, res) => {
 res.json({ ok: true, now: new Date().toISOString() });
