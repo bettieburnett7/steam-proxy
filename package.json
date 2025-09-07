@@ -1,12 +1,9 @@
 {
 "name": "steam-proxy",
 "version": "1.0.0",
-"private": true,
 "type": "commonjs",
 "main": "server.js",
-"scripts": {
-"start": "node server.js"
-},
+"scripts": { "start": "node server.js" },
 "dependencies": {
 "cors": "^2.8.5",
 "dotenv": "^16.4.5",
