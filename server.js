@@ -1,4 +1,4 @@
-// server.js — Steam proxy (Render)
+// server.js — Steam proxy on Render (CommonJS)
 require('dotenv').config();
 
 const express = require('express');
@@ -9,24 +9,24 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const KEY = process.env.STEAM_KEY;
 
+// --- middleware
 app.use(cors({
 origin: [
 'https://steam-frontend-gomv.onrender.com',
-// 'http://localhost:3000'
+// 'http://localhost:3000', // enable if you test locally
 ],
-credentials: false
 }));
-
 app.use(rateLimit({
 windowMs: 60 * 1000,
 max: 60,
 standardHeaders: true,
-legacyHeaders: false
+legacyHeaders: false,
 }));
 
+// helper
 const bad = (res, code, msg) => res.status(code).json({ error: msg });
 
-// Health & debug
+// ---------- health / debug ----------
 app.get('/', (_req, res) => res.type('text').send('Steam proxy running'));
 app.get('/ping', (_req, res) => res.json({ ok: true, now: new Date().toISOString() }));
 app.get('/routes', (_req, res) => {
@@ -39,7 +39,7 @@ path: l.route.path
 res.json(list);
 });
 
-// Steam: profile
+// ---------- STEAM endpoints ----------
 app.get('/steam/profile', async (req, res) => {
 try {
 const { steamid } = req.query;
@@ -51,12 +51,10 @@ url.searchParams.set('steamids', steamid);
 
 const r = await fetch(url);
 if (!r.ok) return bad(res, 502, `Steam error ${r.status}`);
-const data = await r.json();
-res.json(data);
+res.json(await r.json());
 } catch (e) { console.error(e); bad(res, 500, 'Proxy error'); }
 });
 
-// Steam: owned games
 app.get('/steam/owned-games', async (req, res) => {
 try {
 const { steamid } = req.query;
@@ -70,17 +68,16 @@ url.searchParams.set('include_played_free_games', 'true');
 
 const r = await fetch(url);
 if (!r.ok) return bad(res, 502, `Steam error ${r.status}`);
-const data = await r.json();
-res.json(data);
+res.json(await r.json());
 } catch (e) { console.error(e); bad(res, 500, 'Proxy error'); }
 });
 
-// Steam: resolve vanity/profile URL -> steamid
 app.get('/steam/resolve', async (req, res) => {
 try {
 let { v } = req.query;
 if (!v) return bad(res, 400, 'Missing ?v');
 
+// If user pasted a full profile URL, extract tail
 try {
 const u = new URL(v);
 const parts = u.pathname.split('/').filter(Boolean);
@@ -98,11 +95,11 @@ url.searchParams.set('vanityurl', v);
 
 const r = await fetch(url);
 if (!r.ok) return bad(res, 502, `Steam error ${r.status}`);
-const data = await r.json();
-res.json(data);
+res.json(await r.json());
 } catch (e) { console.error(e); bad(res, 500, 'Proxy error'); }
 });
 
+// start last
 app.listen(PORT, () => console.log(`Steam proxy listening on http://localhost:${PORT}`));
 
 
